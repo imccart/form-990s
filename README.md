@@ -1,0 +1,7 @@
+# Repository for Hospital Form 990s
+
+This repository contains code files to import and manage data from the Form 990s for hospitals in the United States. The data is collected from the IRS and is available for public use. Code is intended for use in R.
+
+Primary data comes from the [SOI Tax Stats](https://www.irs.gov/statistics/soi-tax-stats-charities-and-other-tax-exempt-organizations-statistics). Raw microdata are available for download directly from the IRS. The Urban Institute also provides these data in a more user-friendly format, which can be accessed [here](https://nccs.urban.org/nccs/datasets/core/). Users can download the data in CSV format or work with the data directly in R using the `nccs` package. For our purposes, we use the SOI Tax Stats data directly from the IRS as this allows more historic data access.
+
+We also incporporate an EIN to AHA ID crosswalk, `AHA_ein_matches.rds`. The crosswalk file matches EINs in the Form 990s to AHA IDs by hospital name, system name, or both. `Manual_matched_eins.rds` provides additional EIN-AHA matches based on a manual review, allowing for matches that didn’t have perfect name matches. The underlying code file to replicate the matches is in `AHA_ein_crosswalk.R`. Thank you to [Hanna Glenn](https://hannaglenn.netlify.app/) for sharing this crosswalk file and her underlying code!
