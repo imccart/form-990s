@@ -42,7 +42,27 @@ for (i in 85:97) {
         fwf_widths(record.spec$length, record.spec$element_number),
         col_types=paste(record.spec$type, collapse = "")) %>%
         rename_with(~ str_replace_all(., "-", "_")) %>%
-        mutate(year=y) %>%
+        mutate(
+            year=y,
+            current_assets=rowSums(cbind(
+                as.numeric(E161),
+                as.numeric(E162),
+                as.numeric(E163),
+                as.numeric(E164),
+                if (i>=89) as.numeric(E165) else 0,
+                if (i %in% 89:93) 0 else as.numeric(E166),
+                as.numeric(E167),
+                as.numeric(E169),
+                as.numeric(E170)
+            ), na.rm=TRUE),
+            current_liabilities=rowSums(cbind(
+                as.numeric(E179),
+                as.numeric(E180),
+                if (i>=96) as.numeric(E181) else 0,
+                as.numeric(E182),
+                as.numeric(E184)
+            ), na.rm=TRUE)
+        ) %>%
         select(year, name=E002, ein=E003, state=E009, zip=E010, exemption=E011,
                total_revenue=E047, total_expenses=E052, net_assets=E056,
                comp_executive=E060, comp_other=E064, comp_pension=E068, comp_benefits=E072,
@@ -50,8 +70,9 @@ for (i in 85:97) {
                total_assets=E178, cash=E161, investments_securities=E172, investments_lbe=E173, 
                fixed_assets=E175,
                investments_other=E174,
-               total_liabilities=E186) %>%
-        mutate(across(c(total_revenue:total_liabilities), as.numeric))
+               total_liabilities=E186,
+               current_assets, current_liabilities) %>%
+        mutate(across(c(total_revenue:current_liabilities), as.numeric))
 
 ## beginning in 1990, other info is available including subsidiary info:
 ##                subsidiary1=P801, subsidiary2=P805, subsidiary3=P809, subsidiary4=P813,
@@ -76,7 +97,27 @@ for (i in 98:99) {
         fwf_widths(record.spec$length, record.spec$element_number),
         col_types=paste(record.spec$type, collapse = "")) %>%
         rename_with(~ str_replace_all(., "-", "_")) %>%
-        mutate(year=y) %>%
+        mutate(
+            year=y,
+            current_assets=rowSums(cbind(
+                as.numeric(E161),
+                as.numeric(E162),
+                as.numeric(E163),
+                as.numeric(E164),
+                as.numeric(E165),
+                as.numeric(E166),
+                as.numeric(E167),
+                as.numeric(E169),
+                as.numeric(E170)
+            ), na.rm=TRUE),
+            current_liabilities=rowSums(cbind(
+                as.numeric(E179),
+                as.numeric(E180),
+                as.numeric(E181),
+                as.numeric(E182),
+                as.numeric(E184)
+            ), na.rm=TRUE)
+        ) %>%
         select(year, name=E002, ein=E003, state=E009, zip=E010, exemption=E011,
                total_revenue=E047, total_expenses=E052, net_assets=E056,
                comp_executive=E060, comp_other=E064, comp_pension=E068, comp_benefits=E072,
@@ -84,8 +125,9 @@ for (i in 98:99) {
                total_assets=E178, cash=E161, investments_securities=E172, investments_lbe=E173, 
                fixed_assets=E175,
                investments_other=E174,
-               total_liabilities=E186) %>%
-        mutate(across(c(total_revenue:total_liabilities), as.numeric))
+               total_liabilities=E186,
+               current_assets, current_liabilities) %>%
+        mutate(across(c(total_revenue:current_liabilities), as.numeric))
   
     tax.dat98 <- bind_rows(tax.dat0, tax.dat98)
 }
@@ -116,7 +158,51 @@ for (i in 2000:2007) {
             fwf_widths(record.spec$length, record.spec$element_number),
             col_types=paste(record.spec$type, collapse = "")) %>%
             rename_with(~ str_replace_all(., "-", "_")) %>%
-            mutate(year=i) %>%
+            mutate(
+                year=i,
+                current_assets=if (i<2002) {
+                    rowSums(cbind(
+                        as.numeric(A040),
+                        as.numeric(A050),
+                        as.numeric(A060),
+                        as.numeric(A070),
+                        as.numeric(A080),
+                        as.numeric(A090),
+                        as.numeric(A100),
+                        as.numeric(A110),
+                        as.numeric(A120)
+                    ), na.rm=TRUE)
+                } else {
+                    rowSums(cbind(
+                        as.numeric(A040),
+                        as.numeric(A050),
+                        as.numeric(A003),
+                        as.numeric(A004),
+                        as.numeric(A005),
+                        as.numeric(A006),
+                        as.numeric(A007),
+                        as.numeric(A110),
+                        as.numeric(A011)
+                    ), na.rm=TRUE)
+                },
+                current_liabilities=if (i<2002) {
+                    rowSums(cbind(
+                        as.numeric(L020),
+                        as.numeric(L030),
+                        as.numeric(L040),
+                        as.numeric(L050),
+                        as.numeric(L080)
+                    ), na.rm=TRUE)
+                } else {
+                    rowSums(cbind(
+                        as.numeric(L001),
+                        as.numeric(L002),
+                        as.numeric(L003),
+                        as.numeric(L004),
+                        as.numeric(L007)
+                    ), na.rm=TRUE)
+                }
+            ) %>%
             filter(EZ_IND=="N") %>%
             select(year, name=E020, ein=EIN, state=E030, zip=E040, exemption=E050,
                 total_revenue=R270, total_expenses=X050, net_assets=N040,
@@ -125,14 +211,35 @@ for (i in 2000:2007) {
                 total_assets=A180, cash=A040, investments_securities=A130, investments_lbe=A140, 
                 investments_other=A150,
                 fixed_assets=A160,                
-                total_liabilities=L090) %>%
-            mutate(across(c(total_revenue:total_liabilities), as.numeric))            
+                total_liabilities=L090,
+                current_assets, current_liabilities) %>%
+            mutate(across(c(total_revenue:current_liabilities), as.numeric))            
     } else {
         tax.dat0 <- read_fwf(flat.path,
             fwf_widths(record.spec$length, record.spec$element_number),
             col_types=paste(record.spec$type, collapse = "")) %>%
             rename_with(~ str_replace_all(., "-", "_")) %>%
-            mutate(year=i) %>%
+            mutate(
+                year=i,
+                current_assets=rowSums(cbind(
+                    as.numeric(A040),
+                    as.numeric(A050),
+                    as.numeric(A003),
+                    as.numeric(A004),
+                    as.numeric(A005),
+                    as.numeric(A006),
+                    as.numeric(A007),
+                    as.numeric(A110),
+                    as.numeric(A011)
+                ), na.rm=TRUE),
+                current_liabilities=rowSums(cbind(
+                    as.numeric(L001),
+                    as.numeric(L002),
+                    as.numeric(L003),
+                    as.numeric(L004),
+                    as.numeric(L007)
+                ), na.rm=TRUE)
+            ) %>%
             filter(EZ_IND=="N") %>%
             select(year, name=E020, ein=EIN, state=E030, zip=E040, exemption=E050,
                 total_revenue=R270, total_expenses=X050, net_assets=N040,
@@ -142,8 +249,9 @@ for (i in 2000:2007) {
                 investments_securities_oth=A130, investments_lbe=A140, 
                 investments_other=A150,
                 fixed_assets=A160,           
-                total_liabilities=L090) %>%
-            mutate(across(c(total_revenue:total_liabilities), as.numeric)) %>%
+                total_liabilities=L090,
+                current_assets, current_liabilities) %>%
+            mutate(across(c(total_revenue:current_liabilities), as.numeric)) %>%
             mutate(investments_securities=investments_securities_pub+investments_securities_oth)
     }
   
@@ -160,7 +268,27 @@ tax.dat08 <- read_fwf("data/input/microdata/irs-direct/eo2008.flat",
     fwf_widths(record.spec$length, record.spec$element_number),
     col_types=paste(record.spec$type, collapse = "")) %>%
     rename_with(~ str_replace_all(., "-", "_")) %>%
-    mutate(year=2008) %>%
+    mutate(
+        year=2008,
+        current_assets=rowSums(cbind(
+            as.numeric(csh_nnint_bearng_eoy),
+            as.numeric(savngs_temp_csh_invst_eoy),
+            as.numeric(accts_rcvbl_eoy),
+            as.numeric(pledge_grnts_rcvbl_eoy),
+            as.numeric(rcvbl_from_ofcrs_etc_eoy),
+            as.numeric(rcvbl_from_dsqlfy_prsns_eoy),
+            as.numeric(oth_nts_lns_rcvbl_net_eoy),
+            as.numeric(invntry_for_sl_or_use_eoy),
+            as.numeric(prepaid_exp_defrd_chrgs_eoy)
+        ), na.rm=TRUE),
+        current_liabilities=rowSums(cbind(
+            as.numeric(accts_pybl_accr_exp_eoy),
+            as.numeric(grnts_pybl_eoy),
+            as.numeric(defrd_rev_eoy),
+            as.numeric(lns_from_ofcr_dir_eoy),
+            as.numeric(oth_liab_eoy)
+        ), na.rm=TRUE)
+    ) %>%
     select(year, name, ein, state, zip, exemption=subcd,
            total_revenue=tot_rev_cy, total_expenses=tot_expns_cy, net_assets=net_asts_or_fund_bals_eoy,
            comp_executive=comp_curr_ofcr_tot, comp_other=oth_sal_wg_tot, comp_pension=pnsn_plan_contris_tot, comp_benefits=oth_empl_bnfts_tot,
@@ -169,8 +297,9 @@ tax.dat08 <- read_fwf("data/input/microdata/irs-direct/eo2008.flat",
            investments_securities_oth=invst_oth_sec_eoy, fixed_assets=land_bldgs_equip_bss_net_eoy, 
            investments_lbe=d_tot_bk_vl_land_bldg,
            investments_other=invst_prg_rltd_eoy,
-           total_liabilities=tot_liab_eoy) %>%
-    mutate(across(c(total_revenue:total_liabilities), as.numeric)) %>%
+           total_liabilities=tot_liab_eoy,
+           current_assets, current_liabilities) %>%
+    mutate(across(c(total_revenue:current_liabilities), as.numeric)) %>%
     mutate(investments_securities=investments_securities_pub+investments_securities_oth)
 
 
@@ -184,7 +313,27 @@ tax.dat09 <- read_fwf("data/input/microdata/irs-direct/09eoflat.txt",
     fwf_widths(record.spec$length, record.spec$element_number),
     col_types=paste(record.spec$type, collapse = "")) %>%
     rename_with(~ str_replace_all(., "-", "_")) %>%
-    mutate(year=2009) %>%
+    mutate(
+        year=2009,
+        current_assets=rowSums(cbind(
+            as.numeric(csh_nnint_bearng_eoy),
+            as.numeric(savngs_temp_csh_invst_eoy),
+            as.numeric(accts_rcvbl_eoy),
+            as.numeric(pledge_grnts_rcvbl_eoy),
+            as.numeric(rcvbl_from_ofcrs_etc_eoy),
+            as.numeric(rcvbl_from_dsqlfy_prsns_eoy),
+            as.numeric(oth_nts_lns_rcvbl_net_eoy),
+            as.numeric(invntry_for_sl_or_use_eoy),
+            as.numeric(prepaid_exp_defrd_chrgs_eoy)
+        ), na.rm=TRUE),
+        current_liabilities=rowSums(cbind(
+            as.numeric(accts_pybl_accr_exp_eoy),
+            as.numeric(grnts_pybl_eoy),
+            as.numeric(defrd_rev_eoy),
+            as.numeric(lns_from_ofcr_dir_eoy),
+            as.numeric(oth_liab_eoy)
+        ), na.rm=TRUE)
+    ) %>%
     select(year, name, ein, state, zip, exemption=subcd,
            total_revenue=tot_rev_cy, total_expenses=tot_expns_cy, net_assets=net_asts_or_fund_bals_eoy,
            comp_executive=comp_curr_ofcr_tot, comp_other=oth_sal_wg_tot, comp_pension=pnsn_plan_contris_tot, comp_benefits=oth_empl_bnfts_tot,
@@ -193,8 +342,9 @@ tax.dat09 <- read_fwf("data/input/microdata/irs-direct/09eoflat.txt",
            investments_securities_oth=invst_oth_sec_eoy, fixed_assets=land_bldgs_equip_bss_net_eoy, 
            investments_lbe=d_tot_bk_vl_land_bldg,
            investments_other=invst_prg_rltd_eoy,
-           total_liabilities=tot_liab_eoy) %>%
-    mutate(across(c(total_revenue:total_liabilities), as.numeric)) %>%
+           total_liabilities=tot_liab_eoy,
+           current_assets, current_liabilities) %>%
+    mutate(across(c(total_revenue:current_liabilities), as.numeric)) %>%
     mutate(investments_securities=investments_securities_pub+investments_securities_oth)
 
 
@@ -209,7 +359,27 @@ tax.dat10 <- read_fwf("data/input/microdata/irs-direct/2010/10eo.txt",
     fwf_widths(record.spec$length, record.spec$element_number),
     col_types=paste(record.spec$type, collapse = "")) %>%
     rename_with(~ str_replace_all(., "-", "_")) %>%
-    mutate(year=2010) %>%
+    mutate(
+        year=2010,
+        current_assets=rowSums(cbind(
+            as.numeric(csh_nnint_bearng_eoy),
+            as.numeric(savngs_temp_csh_invst_eoy),
+            as.numeric(accts_rcvbl_eoy),
+            as.numeric(pledge_grnts_rcvbl_eoy),
+            as.numeric(rcvbl_from_ofcrs_etc_eoy),
+            as.numeric(rcvbl_from_dsqlfy_prsns_eoy),
+            as.numeric(oth_nts_lns_rcvbl_net_eoy),
+            as.numeric(invntry_for_sl_or_use_eoy),
+            as.numeric(prepaid_exp_defrd_chrgs_eoy)
+        ), na.rm=TRUE),
+        current_liabilities=rowSums(cbind(
+            as.numeric(accts_pybl_accr_exp_eoy),
+            as.numeric(grnts_pybl_eoy),
+            as.numeric(defrd_rev_eoy),
+            as.numeric(lns_from_ofcr_dir_eoy),
+            as.numeric(oth_liab_eoy)
+        ), na.rm=TRUE)
+    ) %>%
     select(year, name, ein, state, zip, exemption=subcd,
            total_revenue=tot_rev_cy, total_expenses=tot_expns_cy, net_assets=net_asts_or_fund_bals_eoy,
            comp_executive=comp_curr_ofcr_tot, comp_other=oth_sal_wg_tot, comp_pension=pnsn_plan_contris_tot, comp_benefits=oth_empl_bnfts_tot,
@@ -218,8 +388,9 @@ tax.dat10 <- read_fwf("data/input/microdata/irs-direct/2010/10eo.txt",
            investments_securities_oth=invst_oth_sec_eoy, fixed_assets=land_bldgs_equip_bss_net_eoy, 
            investments_lbe=d_tot_bk_vl_land_bldg,
            investments_other=invst_prg_rltd_eoy,
-           total_liabilities=tot_liab_eoy) %>%
-    mutate(across(c(total_revenue:total_liabilities), as.numeric)) %>%
+           total_liabilities=tot_liab_eoy,
+           current_assets, current_liabilities) %>%
+    mutate(across(c(total_revenue:current_liabilities), as.numeric)) %>%
     mutate(investments_securities=investments_securities_pub+investments_securities_oth)
 
 
