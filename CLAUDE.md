@@ -40,9 +40,11 @@ These support standard hospital financial ratios (total margin, operating margin
 
 ## ProPublica Pipeline (`build-propublica.R`)
 
-Runs independently of `_build_data.R`. For each unique EIN in `form990_ahaid.txt`, it queries the ProPublica Nonprofit Explorer API, saves structured filing data (generally 2011+) and downloads all available PDFs. Resume-safe: per-EIN CSVs in `data/input/propublica/{ein}/` serve as checkpoints. Combined output goes to `data/output/form990_propublica.csv`. Configurable `max_eins` parameter at top of script for testing.
+Runs independently of `_build_data.R`. For each unique hospital EIN (NTEE codes E20–E24) in `form990_ahaid.txt`, it queries the ProPublica Nonprofit Explorer API, saves structured filing data (generally 2011+) and downloads all available PDFs. Resume-safe: per-EIN CSVs in `data/input/propublica/{ein}/` serve as checkpoints. Combined output goes to `data/output/form990_propublica.csv`. Configurable `max_eins` parameter at top of script for testing.
 
-**Current status:** Script works (tested on 10 EINs). However, the dataset contains 46,006 unique EINs — most are non-hospital 501(c)(3) orgs from the IRS SOI sample. Before running the full pull, we need to filter to hospital EINs only. Next step is to check the derl files for an NTEE code or activity code field that identifies hospitals, extract it in `build-irs-raw.R`, and use it to filter the ProPublica pull.
+**Current status:** Running for ~4,994 hospital EINs. Has retry logic with exponential backoff for 429 rate-limit errors on PDF downloads.
+
+**TODO:** Once the full run completes, add a "retry missing PDFs" pass. Some PDFs fail due to 429 errors even with retries, and the current resume logic skips EINs that already have a CSV (so missed PDFs aren't retried). Need to add logic that checks which PDFs *should* exist vs which *do* exist, and retries the missing ones.
 
 ## Code Conventions
 

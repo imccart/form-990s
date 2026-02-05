@@ -26,6 +26,20 @@
 ## NOTE: For 1985-1999, EZ forms are provided separately from full form 990s. For 2000-2007, EZ forms are included as part of the full data.
 ## Beginning in 2008, EZ forms were again separated from the full 990 data. 
 
+ntee_field_for_year <- function(y) {
+    if (y %in% c(1994, 1995)) {
+        "E300"
+    } else if (y %in% c(1996, 1997, 1998, 1999)) {
+        "NTEE1"
+    } else if (y >= 2000 & y <= 2007) {
+        "NTEE"
+    } else if (y >= 2008) {
+        "ntee"    
+    } else {
+        NA_character_
+    }
+}
+
 ## 1985 through 1997
 record.range <- c('A7:E207','A8:E206','A8:E206','A8:E207','A7:E204',
                   'A7:E314','A7:E315','A7:E334','A7:E334','A7:E335',
@@ -33,6 +47,7 @@ record.range <- c('A7:E207','A8:E206','A8:E206','A8:E207','A7:E204',
 tax.dat85 <- tibble()
 for (i in 85:97) {
     y=1900+i
+    ntee_field <- ntee_field_for_year(y)
     record.spec <- read_excel(paste0("data/input/microdata/irs-direct/eo19",i,"_derl.xls"), 
         range=record.range[i-84],
         col_names=c("element_number","varname","start","length","type")) %>%
@@ -44,6 +59,7 @@ for (i in 85:97) {
         rename_with(~ str_replace_all(., "-", "_")) %>%
         mutate(
             year=y,
+            ntee=if (!is.na(ntee_field)) .data[[ntee_field]] else NA_character_,
             current_assets=rowSums(cbind(
                 as.numeric(E161),
                 as.numeric(E162),
@@ -63,7 +79,7 @@ for (i in 85:97) {
                 as.numeric(E184)
             ), na.rm=TRUE)
         ) %>%
-        select(year, name=E002, ein=E003, state=E009, zip=E010, exemption=E011,
+        select(year, ntee, name=E002, ein=E003, state=E009, zip=E010, exemption=E011,
                total_revenue=E047, total_expenses=E052, net_assets=E056,
                comp_executive=E060, comp_other=E064, comp_pension=E068, comp_benefits=E072,
                depreciation=E125,
@@ -88,6 +104,7 @@ record.range <- c('A11:E378','A9:E375')
 tax.dat98 <- tibble()
 for (i in 98:99) {
     y=1900+i
+    ntee_field <- ntee_field_for_year(y)
     record.spec <- read_xls(paste0("data/input/microdata/irs-direct/eo",i,"derl.xls"), 
         range=record.range[i-97],
         col_names=c("element_number","varname","start","length","type")) %>%
@@ -99,6 +116,7 @@ for (i in 98:99) {
         rename_with(~ str_replace_all(., "-", "_")) %>%
         mutate(
             year=y,
+            ntee=if (!is.na(ntee_field)) .data[[ntee_field]] else NA_character_,
             current_assets=rowSums(cbind(
                 as.numeric(E161),
                 as.numeric(E162),
@@ -118,7 +136,7 @@ for (i in 98:99) {
                 as.numeric(E184)
             ), na.rm=TRUE)
         ) %>%
-        select(year, name=E002, ein=E003, state=E009, zip=E010, exemption=E011,
+        select(year, ntee, name=E002, ein=E003, state=E009, zip=E010, exemption=E011,
                total_revenue=E047, total_expenses=E052, net_assets=E056,
                comp_executive=E060, comp_other=E064, comp_pension=E068, comp_benefits=E072,
                depreciation=E125,
@@ -137,6 +155,7 @@ for (i in 98:99) {
 record.range <- c('A6:E385','A6:E385','A6:E407','A6:E407','A6:E407','A5:E415','A5:E444','A5:E444')
 tax.dat00 <- tibble()
 for (i in 2000:2007) {
+    ntee_field <- ntee_field_for_year(i)
     if (i==2000) {
         flat.path=paste0("data/input/microdata/irs-direct/eo",i,".flat")
     } else {
@@ -160,6 +179,7 @@ for (i in 2000:2007) {
             rename_with(~ str_replace_all(., "-", "_")) %>%
             mutate(
                 year=i,
+                ntee=if (!is.na(ntee_field)) .data[[ntee_field]] else NA_character_,
                 current_assets=if (i<2002) {
                     rowSums(cbind(
                         as.numeric(A040),
@@ -204,7 +224,7 @@ for (i in 2000:2007) {
                 }
             ) %>%
             filter(EZ_IND=="N") %>%
-            select(year, name=E020, ein=EIN, state=E030, zip=E040, exemption=E050,
+            select(year, ntee, name=E020, ein=EIN, state=E030, zip=E040, exemption=E050,
                 total_revenue=R270, total_expenses=X050, net_assets=N040,
                 comp_executive=F825, comp_other=F830, comp_pension=F835, comp_benefits=F840,
                 depreciation=F910,
@@ -221,6 +241,7 @@ for (i in 2000:2007) {
             rename_with(~ str_replace_all(., "-", "_")) %>%
             mutate(
                 year=i,
+                ntee=if (!is.na(ntee_field)) .data[[ntee_field]] else NA_character_,
                 current_assets=rowSums(cbind(
                     as.numeric(A040),
                     as.numeric(A050),
@@ -241,7 +262,7 @@ for (i in 2000:2007) {
                 ), na.rm=TRUE)
             ) %>%
             filter(EZ_IND=="N") %>%
-            select(year, name=E020, ein=EIN, state=E030, zip=E040, exemption=E050,
+            select(year, ntee, name=E020, ein=EIN, state=E030, zip=E040, exemption=E050,
                 total_revenue=R270, total_expenses=X050, net_assets=N040,
                 comp_executive=F825, comp_other=F830, comp_pension=F835, comp_benefits=F840,
                 depreciation=F910,
@@ -264,12 +285,14 @@ record.spec <- read_excel("data/input/microdata/irs-direct/eo2008_derl.xls",
     col_names=c("element_number","varname","start","length","type")) %>%
     mutate(start=as.numeric(start), length=as.numeric(length), type="c")
     
+ntee_field <- ntee_field_for_year(2008)
 tax.dat08 <- read_fwf("data/input/microdata/irs-direct/eo2008.flat",
     fwf_widths(record.spec$length, record.spec$element_number),
     col_types=paste(record.spec$type, collapse = "")) %>%
     rename_with(~ str_replace_all(., "-", "_")) %>%
     mutate(
         year=2008,
+        ntee=if (!is.na(ntee_field)) .data[[ntee_field]] else NA_character_,
         current_assets=rowSums(cbind(
             as.numeric(csh_nnint_bearng_eoy),
             as.numeric(savngs_temp_csh_invst_eoy),
@@ -289,7 +312,7 @@ tax.dat08 <- read_fwf("data/input/microdata/irs-direct/eo2008.flat",
             as.numeric(oth_liab_eoy)
         ), na.rm=TRUE)
     ) %>%
-    select(year, name, ein, state, zip, exemption=subcd,
+    select(year, ntee, name, ein, state, zip, exemption=subcd,
            total_revenue=tot_rev_cy, total_expenses=tot_expns_cy, net_assets=net_asts_or_fund_bals_eoy,
            comp_executive=comp_curr_ofcr_tot, comp_other=oth_sal_wg_tot, comp_pension=pnsn_plan_contris_tot, comp_benefits=oth_empl_bnfts_tot,
            depreciation=deprec_dpltn_tot,
@@ -309,12 +332,14 @@ record.spec <- read_excel("data/input/microdata/irs-direct/eo2009_derl.xls",
     col_names=c("element_number","varname","start","length","type")) %>%
     mutate(start=as.numeric(start), length=as.numeric(length), type="c")
     
+ntee_field <- ntee_field_for_year(2009)
 tax.dat09 <- read_fwf("data/input/microdata/irs-direct/09eoflat.txt",
     fwf_widths(record.spec$length, record.spec$element_number),
     col_types=paste(record.spec$type, collapse = "")) %>%
     rename_with(~ str_replace_all(., "-", "_")) %>%
     mutate(
         year=2009,
+        ntee=if (!is.na(ntee_field)) .data[[ntee_field]] else NA_character_,
         current_assets=rowSums(cbind(
             as.numeric(csh_nnint_bearng_eoy),
             as.numeric(savngs_temp_csh_invst_eoy),
@@ -334,7 +359,7 @@ tax.dat09 <- read_fwf("data/input/microdata/irs-direct/09eoflat.txt",
             as.numeric(oth_liab_eoy)
         ), na.rm=TRUE)
     ) %>%
-    select(year, name, ein, state, zip, exemption=subcd,
+    select(year, ntee, name, ein, state, zip, exemption=subcd,
            total_revenue=tot_rev_cy, total_expenses=tot_expns_cy, net_assets=net_asts_or_fund_bals_eoy,
            comp_executive=comp_curr_ofcr_tot, comp_other=oth_sal_wg_tot, comp_pension=pnsn_plan_contris_tot, comp_benefits=oth_empl_bnfts_tot,
            depreciation=deprec_dpltn_tot,
@@ -355,12 +380,14 @@ record.spec <- read_excel("data/input/microdata/irs-direct/2010/10eoderl.xls",
     col_names=c("element_number","varname","start","length","type")) %>%
     mutate(start=as.numeric(start), length=as.numeric(length), type="c")
     
+ntee_field <- ntee_field_for_year(2010)
 tax.dat10 <- read_fwf("data/input/microdata/irs-direct/2010/10eo.txt",
     fwf_widths(record.spec$length, record.spec$element_number),
     col_types=paste(record.spec$type, collapse = "")) %>%
     rename_with(~ str_replace_all(., "-", "_")) %>%
     mutate(
         year=2010,
+        ntee=if (!is.na(ntee_field)) .data[[ntee_field]] else NA_character_,
         current_assets=rowSums(cbind(
             as.numeric(csh_nnint_bearng_eoy),
             as.numeric(savngs_temp_csh_invst_eoy),
@@ -380,7 +407,7 @@ tax.dat10 <- read_fwf("data/input/microdata/irs-direct/2010/10eo.txt",
             as.numeric(oth_liab_eoy)
         ), na.rm=TRUE)
     ) %>%
-    select(year, name, ein, state, zip, exemption=subcd,
+    select(year, ntee, name, ein, state, zip, exemption=subcd,
            total_revenue=tot_rev_cy, total_expenses=tot_expns_cy, net_assets=net_asts_or_fund_bals_eoy,
            comp_executive=comp_curr_ofcr_tot, comp_other=oth_sal_wg_tot, comp_pension=pnsn_plan_contris_tot, comp_benefits=oth_empl_bnfts_tot,
            depreciation=deprec_dpltn_tot,

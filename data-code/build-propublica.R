@@ -10,8 +10,9 @@
 # Settings ----------------------------------------------------------------
 
 api_pause     <- 1    # seconds between organization API calls
-pdf_pause     <- 2    # seconds between PDF downloads
-max_eins      <- 10  # set to a finite number to test on a subset
+pdf_pause     <- 3    # seconds between PDF downloads
+pdf_retries   <- 3    # number of retries on 429 errors
+max_eins      <- 500  # set to a finite number to test on a subset
 
 
 # Preliminaries -----------------------------------------------------------
@@ -23,13 +24,20 @@ propublica_dir <- "data/input/propublica"
 output_file    <- "data/output/form990_propublica.csv"
 
 
-# Read unique EINs from existing data -------------------------------------
+# Read unique hospital EINs from existing data -----------------------------
 
 irs_dat <- read_tsv("data/output/form990_ahaid.txt", col_types = cols(.default = "c"))
-eins    <- unique(na.omit(irs_dat$ein))
-eins    <- eins[seq_len(min(length(eins), max_eins))]
 
-cat(sprintf("Found %d unique EINs to query.\n", length(eins)))
+# Keep only EINs that *ever* have an NTEE code in the hospital range (E20-E24)
+hospital_eins <- irs_dat %>%
+  filter(!is.na(ntee), str_detect(ntee, "^E2")) %>%
+  pull(ein) %>%
+  unique()
+
+eins <- hospital_eins[seq_len(min(length(hospital_eins), max_eins))]
+
+cat(sprintf("Found %d hospital EINs (out of %d total unique EINs).\n",
+            length(hospital_eins), n_distinct(irs_dat$ein)))
 
 
 # Create output directories -----------------------------------------------
@@ -54,22 +62,51 @@ rename_map <- c(
 )
 
 
-# Helper: download a single PDF -------------------------------------------
+# Helper: download a single PDF with retry on 429 -------------------------
 
 download_pdf <- function(url, dest) {
   if (is.null(url) || is.na(url) || url == "") return(invisible(NULL))
   if (file.exists(dest)) return(invisible(NULL))
 
-  tryCatch({
-    resp <- request(url) |>
-      req_headers(`User-Agent` = "R hospital-form-990s research project") |>
-      req_timeout(60) |>
-      req_perform()
-    writeBin(resp_body_raw(resp), dest)
-    Sys.sleep(pdf_pause)
-  }, error = function(e) {
-    message(sprintf("  PDF download failed (%s): %s", basename(dest), conditionMessage(e)))
-  })
+  for (attempt in seq_len(pdf_retries)) {
+    resp <- tryCatch({
+      request(url) |>
+        req_headers(`User-Agent` = "R hospital-form-990s research project") |>
+        req_error(is_error = function(resp) FALSE) |>
+        req_timeout(60) |>
+        req_perform()
+    }, error = function(e) {
+      list(error = TRUE, message = conditionMessage(e))
+    })
+
+    # Connection error
+    if (is.list(resp) && !inherits(resp, "httr2_response") && isTRUE(resp$error)) {
+      message(sprintf("  PDF download failed (%s): %s", basename(dest), resp$message))
+      return(invisible(NULL))
+    }
+
+    status <- resp_status(resp)
+
+    # Success
+    if (status == 200) {
+      writeBin(resp_body_raw(resp), dest)
+      Sys.sleep(pdf_pause)
+      return(invisible(NULL))
+    }
+
+    # Rate limited — back off and retry
+    if (status == 429 && attempt < pdf_retries) {
+      backoff <- pdf_pause * (2 ^ attempt)  # exponential backoff
+      message(sprintf("  429 on %s, waiting %ds before retry %d/%d...",
+                      basename(dest), backoff, attempt + 1, pdf_retries))
+      Sys.sleep(backoff)
+      next
+    }
+
+    # Other error or final 429
+    message(sprintf("  PDF download failed (%s): HTTP %d", basename(dest), status))
+    return(invisible(NULL))
+  }
 }
 
 
