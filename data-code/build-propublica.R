@@ -12,7 +12,7 @@
 api_pause     <- 1    # seconds between organization API calls
 pdf_pause     <- 3    # seconds between PDF downloads
 pdf_retries   <- 3    # number of retries on 429 errors
-max_eins      <- 500  # set to a finite number to test on a subset
+max_eins      <- Inf  # set to a finite number to test on a subset
 
 
 # Preliminaries -----------------------------------------------------------
